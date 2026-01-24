@@ -1,31 +1,106 @@
 # 📹 Video Processor - Video Service
 
-Microserviço responsável pelo upload, listagem e gestão de vídeos.
+[![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green.svg)](https://fastapi.tiangolo.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## 📐 Arquitetura
+> Microserviço responsável pelo upload, listagem e gestão de vídeos.
+
+## 📋 Índice
+
+- [Arquitetura](#-arquitetura)
+- [API Endpoints](#-api-endpoints)
+- [Como Executar](#-como-executar)
+- [Variáveis de Ambiente](#-variáveis-de-ambiente)
+- [Testes](#-testes)
+
+---
+
+## 🏗️ Arquitetura
 
 ```
-fiap-soat-video-service/
-├── src/video_service/
-│   ├── domain/entities/          # Video entity
-│   ├── application/
-│   │   ├── ports/                # IVideoRepository, IStorageService
-│   │   └── use_cases/            # UploadVideo, GetVideo, ListVideos
-│   └── infrastructure/
-│       ├── adapters/input/api/   # FastAPI routes
-│       ├── adapters/output/      # PostgreSQL, S3 storage
-│       └── config/               # Settings
-├── Dockerfile
-└── pyproject.toml
+src/video_service/
+├── domain/
+│   └── entities/video.py        # Entidade Video
+├── application/
+│   ├── ports/output/            # IVideoRepository, IStorageService
+│   └── use_cases/               # UploadVideo, GetVideo, ListVideos
+└── infrastructure/
+    ├── adapters/
+    │   ├── input/api/           # FastAPI routes
+    │   └── output/
+    │       ├── persistence/     # SQLAlchemy repository
+    │       ├── storage/         # S3 adapter
+    │       └── messaging/       # SNS/SQS publishers
+    └── config/                  # Settings
 ```
 
-## 🚀 Rodar Localmente
+---
+
+## 📡 API Endpoints
+
+| Método | Endpoint | Descrição | Autenticação |
+|--------|----------|-----------|--------------|
+| POST | `/videos/upload` | Upload de vídeo | ✅ JWT |
+| GET | `/videos` | Listar vídeos do usuário | ✅ JWT |
+| GET | `/videos/{id}` | Detalhes do vídeo | ✅ JWT |
+| DELETE | `/videos/{id}` | Deletar vídeo | ✅ JWT |
+| GET | `/health` | Health check | ❌ |
+
+### Exemplos
+
+#### Upload de Vídeo
+
+```bash
+curl -X POST http://localhost:8002/videos/upload \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "file=@meu_video.mp4"
+```
+
+**Resposta:**
+```json
+{
+  "id": "uuid",
+  "filename": "meu_video.mp4",
+  "size_bytes": 10485760,
+  "status": "PENDING",
+  "job_id": "uuid",
+  "created_at": "2024-01-01T00:00:00Z"
+}
+```
+
+#### Listar Vídeos
+
+```bash
+curl http://localhost:8002/videos \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Resposta:**
+```json
+{
+  "items": [
+    {
+      "id": "uuid",
+      "filename": "video1.mp4",
+      "status": "COMPLETED",
+      "created_at": "2024-01-01T00:00:00Z"
+    }
+  ],
+  "total": 1,
+  "page": 1
+}
+```
+
+---
+
+## 🚀 Como Executar
 
 ### Pré-requisitos
 
 - Python 3.11+
-- PostgreSQL rodando na porta 5434
-- MinIO/S3 na porta 9000
+- PostgreSQL
+- AWS S3 (ou LocalStack)
 
 ### 1. Clone e instale
 
@@ -35,14 +110,13 @@ cd fiap-soat-video-service
 pip install -e ".[dev]"
 ```
 
-### 2. Configure variáveis de ambiente
+### 2. Configure as variáveis
 
 ```bash
-export DATABASE_URL="postgresql+asyncpg://postgres:postgres@localhost:5434/video_db"
-export AWS_ENDPOINT_URL="http://localhost:9000"
-export AWS_ACCESS_KEY_ID="minioadmin"
-export AWS_SECRET_ACCESS_KEY="minioadmin123"
-export S3_BUCKET="video-processor"
+export DATABASE_URL="postgresql+asyncpg://postgres:postgres@localhost:5433/video_db"
+export AWS_ENDPOINT_URL="http://localhost:4566"  # LocalStack
+export S3_INPUT_BUCKET="video-uploads"
+export SQS_JOB_QUEUE_URL="http://localhost:4566/000000000000/job-queue"
 ```
 
 ### 3. Execute
@@ -51,50 +125,38 @@ export S3_BUCKET="video-processor"
 uvicorn video_service.infrastructure.adapters.input.api.main:app --reload --port 8002
 ```
 
-### 4. Acesse
-
-- Swagger: http://localhost:8002/docs
-- Health: http://localhost:8002/health
-
-## 📖 API Endpoints
-
-| Método | Endpoint | Descrição |
-|--------|----------|-----------|
-| POST | `/videos/upload` | Upload de vídeo |
-| GET | `/videos` | Listar vídeos do usuário |
-| GET | `/videos/{video_id}` | Obter detalhes do vídeo |
-| GET | `/health` | Health check |
-
-### Exemplos
-
-**Upload de vídeo:**
-```bash
-curl -X POST http://localhost:8002/videos/upload \
-  -H "Authorization: Bearer $TOKEN" \
-  -F "file=@video.mp4"
-```
-
-**Listar vídeos:**
-```bash
-curl http://localhost:8002/videos \
-  -H "Authorization: Bearer $TOKEN"
-```
+---
 
 ## 🐳 Docker
 
 ```bash
 docker build -t video-service .
 docker run -p 8002:8002 \
-  -e DATABASE_URL=... \
-  -e AWS_ENDPOINT_URL=... \
+  -e DATABASE_URL="..." \
+  -e AWS_ENDPOINT_URL="..." \
   video-service
 ```
+
+---
+
+## ⚙️ Variáveis de Ambiente
+
+| Variável | Descrição | Padrão |
+|----------|-----------|--------|
+| `DATABASE_URL` | URL PostgreSQL | - |
+| `AWS_ENDPOINT_URL` | Endpoint AWS/LocalStack | - |
+| `S3_INPUT_BUCKET` | Bucket para uploads | video-uploads |
+| `SQS_JOB_QUEUE_URL` | URL da fila de jobs | - |
+
+---
 
 ## 🧪 Testes
 
 ```bash
 pytest tests/ -v --cov=video_service
 ```
+
+---
 
 ## 📄 Licença
 
