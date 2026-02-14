@@ -5,10 +5,28 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
 
-COPY pyproject.toml .
-RUN pip install --no-cache-dir -e .
+# Copy shared package first
+COPY fiap-soat-video-shared/ /tmp/video-processor-shared/
+RUN pip install --no-cache-dir /tmp/video-processor-shared/
 
-COPY src/ src/
+COPY fiap-soat-video-service/pyproject.toml .
+RUN pip install --no-cache-dir \
+    "fastapi>=0.109.0" \
+    "uvicorn[standard]>=0.27.0" \
+    "pydantic>=2.0.0" \
+    "pydantic-settings>=2.0.0" \
+    "sqlalchemy>=2.0.0" \
+    "asyncpg>=0.29.0" \
+    "psycopg2-binary>=2.9.0" \
+    "redis>=5.0.0" \
+    "aioboto3>=12.0.0" \
+    "python-multipart>=0.0.6" \
+    "httpx>=0.26.0"
+
+COPY fiap-soat-video-service/src/ src/
+
+# Set Python path
+ENV PYTHONPATH=/app/src
 
 RUN adduser --disabled-password --gecos '' appuser && chown -R appuser:appuser /app
 USER appuser
