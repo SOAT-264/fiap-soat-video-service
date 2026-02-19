@@ -19,20 +19,18 @@ from video_processor_shared.domain.exceptions import InvalidVideoFormatError, Vi
 router = APIRouter()
 
 
-@router.post("/upload", response_model=VideoResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/upload", response_model=list[VideoResponse], status_code=status.HTTP_201_CREATED)
 async def upload_video(
-    file: Annotated[UploadFile, File()],
+    files: Annotated[list[UploadFile], File()],
     user_id: Annotated[UUID, Depends(get_current_user_id)],
     video_repository=Depends(get_video_repository),
     storage_service=Depends(get_storage_service),
     event_publisher=Depends(get_event_publisher),
 ):
-    """Upload a video file."""
+    """Upload one or more video files."""
     try:
-        # Get file size
-        file.file.seek(0, 2)
-        file_size = file.file.tell()
-        file.file.seek(0)
+        if not files:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No files provided")
 
         use_case = UploadVideoUseCase(
             video_repository=video_repository,
@@ -40,24 +38,38 @@ async def upload_video(
             event_publisher=event_publisher,
         )
 
-        result = await use_case.execute(
-            UploadVideoInput(
-                user_id=user_id,
-                filename=file.filename,
-                file=file.file,
-                file_size=file_size,
-                content_type=file.content_type or "video/mp4",
-            )
-        )
+        responses: list[VideoResponse] = []
+        for file in files:
+            if not file.filename:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="File name is required")
 
-        return VideoResponse(
-            id=result.id,
-            user_id=result.user_id,
-            original_filename=result.original_filename,
-            file_size=result.file_size,
-            format=result.format,
-            created_at=result.created_at,
-        )
+            # Get file size
+            file.file.seek(0, 2)
+            file_size = file.file.tell()
+            file.file.seek(0)
+
+            result = await use_case.execute(
+                UploadVideoInput(
+                    user_id=user_id,
+                    filename=file.filename,
+                    file=file.file,
+                    file_size=file_size,
+                    content_type=file.content_type or "video/mp4",
+                )
+            )
+
+            responses.append(
+                VideoResponse(
+                    id=result.id,
+                    user_id=result.user_id,
+                    original_filename=result.original_filename,
+                    file_size=result.file_size,
+                    format=result.format,
+                    created_at=result.created_at,
+                )
+            )
+
+        return responses
     except InvalidVideoFormatError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except VideoTooLargeError as e:

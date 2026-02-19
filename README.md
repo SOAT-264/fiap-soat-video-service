@@ -41,7 +41,7 @@ src/video_service/
 
 | Método | Endpoint | Descrição | Autenticação |
 |--------|----------|-----------|--------------|
-| POST | `/videos/upload` | Upload de vídeo | ✅ JWT |
+| POST | `/videos/upload` | Upload de vídeos | ✅ JWT |
 | GET | `/videos` | Listar vídeos do usuário | ✅ JWT |
 | GET | `/videos/{id}` | Detalhes do vídeo | ✅ JWT |
 | DELETE | `/videos/{id}` | Deletar vídeo | ✅ JWT |
@@ -49,24 +49,35 @@ src/video_service/
 
 ### Exemplos
 
-#### Upload de Vídeo
+#### Upload de Vídeos
 
 ```bash
 curl -X POST http://localhost:8002/videos/upload \
   -H "Authorization: Bearer $TOKEN" \
-  -F "file=@meu_video.mp4"
+  -F "files=@meu_video.mp4" \
+  -F "files=@meu_video_2.mp4"
 ```
 
 **Resposta:**
 ```json
-{
-  "id": "uuid",
-  "filename": "meu_video.mp4",
-  "size_bytes": 10485760,
-  "status": "PENDING",
-  "job_id": "uuid",
-  "created_at": "2024-01-01T00:00:00Z"
-}
+[
+  {
+    "id": "uuid",
+    "user_id": "uuid",
+    "original_filename": "meu_video.mp4",
+    "file_size": 10485760,
+    "format": "mp4",
+    "created_at": "2024-01-01T00:00:00Z"
+  },
+  {
+    "id": "uuid",
+    "user_id": "uuid",
+    "original_filename": "meu_video_2.mp4",
+    "file_size": 20971520,
+    "format": "mp4",
+    "created_at": "2024-01-01T00:00:01Z"
+  }
+]
 ```
 
 #### Listar Vídeos
