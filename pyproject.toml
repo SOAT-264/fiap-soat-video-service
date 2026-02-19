@@ -36,3 +36,7 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "--cov=video_service --cov-report=term-missing --cov-fail-under=85"
+testpaths = ["tests"]
