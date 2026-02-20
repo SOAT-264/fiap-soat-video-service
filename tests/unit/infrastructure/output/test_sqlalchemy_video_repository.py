@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from types import SimpleNamespace
 from uuid import uuid4
 from unittest.mock import AsyncMock, MagicMock
@@ -69,7 +69,7 @@ async def test_find_by_id_returns_entity_or_none():
         file_size=100,
         format="mp4",
         duration=10.0,
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(UTC),
     )
 
     session.execute.return_value = _Result(one=model)
@@ -95,7 +95,7 @@ async def test_find_by_user_id_delete_and_count():
         file_size=100,
         format="mp4",
         duration=None,
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(UTC),
     )
     m2 = SimpleNamespace(
         id=uuid4(),
@@ -105,7 +105,7 @@ async def test_find_by_user_id_delete_and_count():
         file_size=200,
         format="mp4",
         duration=None,
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(UTC),
     )
 
     session.execute.return_value = _Result(rows=[m1, m2])

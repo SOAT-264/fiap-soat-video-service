@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from io import BytesIO
 from uuid import uuid4
 from unittest.mock import AsyncMock, patch
@@ -19,7 +19,7 @@ async def test_upload_video_success_persists_and_publishes_event():
     storage = AsyncMock()
     publisher = AsyncMock()
 
-    created_at = datetime.utcnow()
+    created_at = datetime.now(UTC)
     saved_video = Video(
         id=generated_id,
         user_id=user_id,

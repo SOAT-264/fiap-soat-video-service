@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 from unittest.mock import AsyncMock
 
@@ -11,7 +11,7 @@ from video_service.domain.entities.video import Video
 @pytest.mark.asyncio
 async def test_list_videos_with_pagination():
     user_id = uuid4()
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
 
     video1 = Video(
         id=uuid4(),
