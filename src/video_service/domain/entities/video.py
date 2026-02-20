@@ -1,5 +1,5 @@
 """Video Entity."""
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Optional
 from uuid import UUID
 
@@ -28,7 +28,7 @@ class Video:
         self.file_size = file_size
         self.format = format.lower()
         self.duration = duration
-        self.created_at = created_at or datetime.utcnow()
+        self.created_at = created_at or datetime.now(UTC)
 
     @property
     def file_size_mb(self) -> float:
