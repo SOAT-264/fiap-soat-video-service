@@ -1,4 +1,5 @@
 """SQLAlchemy Video Repository."""
+from datetime import UTC, datetime
 from typing import List, Optional
 from uuid import UUID
 
@@ -23,7 +24,7 @@ class SQLAlchemyVideoRepository(IVideoRepository):
             file_size=video.file_size,
             format=video.format,
             duration=video.duration,
-            created_at=video.created_at,
+            created_at=self._to_db_datetime(video.created_at),
         )
         self._session.add(model)
         await self._session.flush()
@@ -70,5 +71,17 @@ class SQLAlchemyVideoRepository(IVideoRepository):
             file_size=model.file_size,
             format=model.format,
             duration=model.duration,
-            created_at=model.created_at,
+            created_at=self._from_db_datetime(model.created_at),
         )
+
+    @staticmethod
+    def _to_db_datetime(dt: datetime) -> datetime:
+        if dt.tzinfo is None:
+            return dt
+        return dt.astimezone(UTC).replace(tzinfo=None)
+
+    @staticmethod
+    def _from_db_datetime(dt: datetime) -> datetime:
+        if dt.tzinfo is not None:
+            return dt.astimezone(UTC)
+        return dt.replace(tzinfo=UTC)
