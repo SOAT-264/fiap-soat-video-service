@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import uuid4
 from unittest.mock import AsyncMock
 
@@ -22,7 +22,7 @@ async def test_get_video_success():
         file_path="s3://bucket/movie.mp4",
         file_size=123,
         format="mp4",
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(UTC),
     )
     repo.find_by_id.return_value = expected_video
 

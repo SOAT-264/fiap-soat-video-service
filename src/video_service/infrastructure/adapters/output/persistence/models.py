@@ -1,5 +1,5 @@
 """SQLAlchemy Models."""
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from sqlalchemy import DateTime, Float, Integer, String
@@ -19,4 +19,4 @@ class VideoModel(Base):
     file_size: Mapped[int] = mapped_column(Integer, nullable=False)
     format: Mapped[str] = mapped_column(String(50), nullable=False)
     duration: Mapped[float] = mapped_column(Float, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(UTC), index=True)
