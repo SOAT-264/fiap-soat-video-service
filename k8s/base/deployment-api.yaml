@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: video-api-service
+  namespace: video-processor
+  labels:
+    app: video-api-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: video-api-service
+  template:
+    metadata:
+      labels:
+        app: video-api-service
+    spec:
+      containers:
+        - name: video-api-service
+          image: fiap-soat-video-service:local
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8000
+              name: http
+          envFrom:
+            - configMapRef:
+                name: video-app-config
+            - secretRef:
+                name: video-app-secret
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"

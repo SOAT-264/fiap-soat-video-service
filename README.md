@@ -11,6 +11,7 @@
 - [Arquitetura](#-arquitetura)
 - [API Endpoints](#-api-endpoints)
 - [Como Executar](#-como-executar)
+- [Kubernetes](#-kubernetes)
 - [Variáveis de Ambiente](#-variáveis-de-ambiente)
 - [Testes](#-testes)
 
@@ -146,6 +147,38 @@ docker run -p 8002:8002 \
   -e DATABASE_URL="..." \
   -e AWS_ENDPOINT_URL="..." \
   video-service
+```
+
+---
+
+## ☸️ Kubernetes
+
+Os manifests Kubernetes estão em `k8s/`.
+
+Pre-requisito para o HPA: `metrics-server` instalado no cluster.
+
+- `k8s/base`: deployment, service, configmap, secret e HPA (`autoscaling/v2`)
+- `k8s/overlays/local-dev`: patches para integração com `fiap-soat-video-local-dev`
+
+### Build local da imagem (sem GHCR/ECR)
+
+```bash
+cd ..
+docker build -t fiap-soat-video-service:local -f fiap-soat-video-service/Dockerfile .
+```
+
+### Deploy no cluster
+
+```bash
+cd fiap-soat-video-service
+kubectl apply -k k8s/overlays/local-dev
+```
+
+### Verificar HPA por CPU e memória
+
+```bash
+kubectl get hpa -n video-processor
+kubectl describe hpa video-api-service-hpa -n video-processor
 ```
 
 ---
