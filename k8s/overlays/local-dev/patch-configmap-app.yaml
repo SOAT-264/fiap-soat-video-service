@@ -7,4 +7,4 @@ data:
   DATABASE_URL: "postgresql+asyncpg://postgres:postgres123@host.docker.internal:5433/video_db"
   REDIS_URL: "redis://host.docker.internal:6379/1"
   AWS_ENDPOINT_URL: "http://host.docker.internal:4566"
-  AUTH_SERVICE_URL: "http://host.docker.internal:8001"
+  AUTH_SERVICE_URL: "http://host.docker.internal:32513"
