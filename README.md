@@ -1,207 +1,78 @@
-# 📹 Video Processor - Video Service
+# fiap-soat-video-service
 
-[![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green.svg)](https://fastapi.tiangolo.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+## Introdução
+Microserviço responsável por upload e gerenciamento de vídeos. Ele valida autenticação com o serviço de auth, persiste metadados e publica eventos de domínio para iniciar o pipeline assíncrono de processamento.
 
-> Microserviço responsável pelo upload, listagem e gestão de vídeos.
+## Sumário
+- Explicação do projeto
+- Objetivo
+- Como funciona
+- Integrações com outros repositórios
+- Como executar
+- Como testar
 
-## 📋 Índice
+## Explicação do projeto
+O projeto implementa API FastAPI para operações de vídeo e segue arquitetura em camadas (`application`, `domain`, `infrastructure`). O upload utiliza storage S3 compatível e publica eventos para o fluxo de jobs.
 
-- [Arquitetura](#-arquitetura)
-- [API Endpoints](#-api-endpoints)
-- [Como Executar](#-como-executar)
-- [Kubernetes](#-kubernetes)
-- [Variáveis de Ambiente](#-variáveis-de-ambiente)
-- [Testes](#-testes)
+## Objetivo
+Centralizar a entrada de vídeos na plataforma, garantindo controle de acesso, persistência e disparo confiável do processamento assíncrono.
 
----
+## Como funciona
+1. `POST /videos/upload` recebe um ou mais arquivos de vídeo autenticados.
+2. O token bearer é validado em `fiap-soat-video-auth` via `GET /auth/me`.
+3. O arquivo é enviado para S3 (`video-uploads`) e o metadado é salvo no banco.
+4. O caso de uso publica `VideoUploadedEvent` via SNS (`video-events`).
+5. Endpoints de consulta:
+`GET /videos/{video_id}`, `GET /videos`, além de `GET /health` e `GET /metrics`.
 
-## 🏗️ Arquitetura
+## Integrações com outros repositórios
+| Repositório integrado | Como integra | Para que serve |
+| --- | --- | --- |
+| `fiap-soat-video-auth` | Chamada HTTP para `GET /auth/me` durante requests autenticadas | Validar identidade do usuário antes de permitir upload/consulta |
+| `fiap-soat-video-jobs` | Publicação de evento `video-events` (SNS) consumido pelo worker de jobs via SQS | Iniciar processamento assíncrono do vídeo enviado |
+| `fiap-soat-video-notifications` | Integração indireta via pipeline de eventos (`job-events`) após processamento | Notificar usuário ao final ou falha de processamento |
+| `fiap-soat-video-shared` | Uso de eventos/exceções compartilhadas (`VideoUploadedEvent`, erros de domínio) | Padronizar contrato de domínio entre serviços |
+| `fiap-soat-video-local-dev` | Infra local (DB/Redis/LocalStack), deploy em k8s local-dev e rota `video.localhost` | Executar fluxo completo ponta a ponta no ambiente principal |
+| `fiap-soat-video-obs` | Exposição de `/health` e `/metrics` para scraping | Monitorar saúde e métricas da API de vídeo |
 
-```
-src/video_service/
-├── domain/
-│   └── entities/video.py        # Entidade Video
-├── application/
-│   ├── ports/output/            # IVideoRepository, IStorageService
-│   └── use_cases/               # UploadVideo, GetVideo, ListVideos
-└── infrastructure/
-    ├── adapters/
-    │   ├── input/api/           # FastAPI routes
-    │   └── output/
-    │       ├── persistence/     # SQLAlchemy repository
-    │       ├── storage/         # S3 adapter
-    │       └── messaging/       # SNS/SQS publishers
-    └── config/                  # Settings
-```
-
----
-
-## 📡 API Endpoints
-
-| Método | Endpoint | Descrição | Autenticação |
-|--------|----------|-----------|--------------|
-| POST | `/videos/upload` | Upload de vídeos | ✅ JWT |
-| GET | `/videos` | Listar vídeos do usuário | ✅ JWT |
-| GET | `/videos/{id}` | Detalhes do vídeo | ✅ JWT |
-| DELETE | `/videos/{id}` | Deletar vídeo | ✅ JWT |
-| GET | `/health` | Health check | ❌ |
-
-### Exemplos
-
-#### Upload de Vídeos
-
-```bash
-curl -X POST http://localhost:8002/videos/upload \
-  -H "Authorization: Bearer $TOKEN" \
-  -F "files=@meu_video.mp4" \
-  -F "files=@meu_video_2.mp4"
-```
-
-**Resposta:**
-```json
-[
-  {
-    "id": "uuid",
-    "user_id": "uuid",
-    "original_filename": "meu_video.mp4",
-    "file_size": 10485760,
-    "format": "mp4",
-    "created_at": "2024-01-01T00:00:00Z"
-  },
-  {
-    "id": "uuid",
-    "user_id": "uuid",
-    "original_filename": "meu_video_2.mp4",
-    "file_size": 20971520,
-    "format": "mp4",
-    "created_at": "2024-01-01T00:00:01Z"
-  }
-]
-```
-
-#### Listar Vídeos
-
-```bash
-curl http://localhost:8002/videos \
-  -H "Authorization: Bearer $TOKEN"
-```
-
-**Resposta:**
-```json
-{
-  "items": [
-    {
-      "id": "uuid",
-      "filename": "video1.mp4",
-      "status": "COMPLETED",
-      "created_at": "2024-01-01T00:00:00Z"
-    }
-  ],
-  "total": 1,
-  "page": 1
-}
-```
-
----
-
-## 🚀 Como Executar
-
+## Como executar
 ### Pré-requisitos
-
 - Python 3.11+
-- PostgreSQL
-- AWS S3 (ou LocalStack)
+- Infra local (recomendado via `fiap-soat-video-local-dev`)
 
-### 1. Clone e instale
-
-```bash
-git clone https://github.com/morgadope/fiap-soat-video-service.git
-cd fiap-soat-video-service
+### Execução local da API
+```powershell
+cd /fiap-soat-video-service
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
 pip install -e ".[dev]"
+
+$env:DATABASE_URL="postgresql+asyncpg://postgres:postgres123@localhost:5433/video_db"
+$env:REDIS_URL="redis://localhost:6379/1"
+$env:AWS_ENDPOINT_URL="http://localhost:4566"
+$env:AWS_ACCESS_KEY_ID="test"
+$env:AWS_SECRET_ACCESS_KEY="test"
+$env:AWS_DEFAULT_REGION="us-east-1"
+$env:S3_BUCKET="video-uploads"
+$env:SNS_TOPIC_ARN="arn:aws:sns:us-east-1:000000000000:video-events"
+$env:AUTH_SERVICE_URL="http://localhost:8001"
+
+uvicorn video_service.infrastructure.adapters.input.api.main:app --host 0.0.0.0 --port 8002 --reload
 ```
 
-### 2. Configure as variáveis
-
-```bash
-export DATABASE_URL="postgresql+asyncpg://postgres:postgres@localhost:5433/video_db"
-export AWS_ENDPOINT_URL="http://localhost:4566"  # LocalStack
-export S3_INPUT_BUCKET="video-uploads"
-export SQS_JOB_QUEUE_URL="http://localhost:4566/000000000000/job-queue"
+### Execução integrada (recomendada)
+```powershell
+cd /fiap-soat-video-local-dev
+.\start.ps1
 ```
 
-### 3. Execute
-
-```bash
-uvicorn video_service.infrastructure.adapters.input.api.main:app --reload --port 8002
+## Como testar
+```powershell
+cd /fiap-soat-video-service
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -e ".[dev]"
+pytest
 ```
 
----
 
-## 🐳 Docker
-
-```bash
-docker build -t video-service .
-docker run -p 8002:8002 \
-  -e DATABASE_URL="..." \
-  -e AWS_ENDPOINT_URL="..." \
-  video-service
-```
-
----
-
-## ☸️ Kubernetes
-
-Os manifests Kubernetes estão em `k8s/`.
-
-Pre-requisito para o HPA: `metrics-server` instalado no cluster.
-
-- `k8s/base`: deployment, service, configmap, secret e HPA (`autoscaling/v2`)
-- `k8s/overlays/local-dev`: patches para integração com `fiap-soat-video-local-dev`
-
-### Build local da imagem (sem GHCR/ECR)
-
-```bash
-cd ..
-docker build -t fiap-soat-video-service:local -f fiap-soat-video-service/Dockerfile .
-```
-
-### Deploy no cluster
-
-```bash
-cd fiap-soat-video-service
-kubectl apply -k k8s/overlays/local-dev
-```
-
-### Verificar HPA por CPU e memória
-
-```bash
-kubectl get hpa -n video-processor
-kubectl describe hpa video-api-service-hpa -n video-processor
-```
-
----
-
-## ⚙️ Variáveis de Ambiente
-
-| Variável | Descrição | Padrão |
-|----------|-----------|--------|
-| `DATABASE_URL` | URL PostgreSQL | - |
-| `AWS_ENDPOINT_URL` | Endpoint AWS/LocalStack | - |
-| `S3_INPUT_BUCKET` | Bucket para uploads | video-uploads |
-| `SQS_JOB_QUEUE_URL` | URL da fila de jobs | - |
-
----
-
-## 🧪 Testes
-
-```bash
-pytest tests/ -v --cov=video_service
-```
-
----
-
-## 📄 Licença
-
-MIT License
