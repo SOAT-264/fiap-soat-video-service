@@ -7,9 +7,17 @@ Microserviço responsável por upload e gerenciamento de vídeos. Ele valida aut
 - Explicação do projeto
 - Objetivo
 - Como funciona
+- Repositórios relacionados
 - Integrações com outros repositórios
 - Como executar
 - Como testar
+
+## Repositórios relacionados
+- [fiap-soat-video-auth](https://github.com/SOAT-264/fiap-soat-video-auth)
+- [fiap-soat-video-jobs](https://github.com/SOAT-264/fiap-soat-video-jobs)
+- [fiap-soat-video-shared](https://github.com/SOAT-264/fiap-soat-video-shared)
+- [fiap-soat-video-local-dev](https://github.com/SOAT-264/fiap-soat-video-local-dev)
+- [fiap-soat-video-obs](https://github.com/SOAT-264/fiap-soat-video-obs)
 
 ## Explicação do projeto
 O projeto implementa API FastAPI para operações de vídeo e segue arquitetura em camadas (`application`, `domain`, `infrastructure`). O upload utiliza storage S3 compatível e publica eventos para o fluxo de jobs.
