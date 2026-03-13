@@ -1,6 +1,8 @@
 # fiap-soat-video-service
 
 ## Introdução
+> Este repositório faz parte do projeto [FIAP SOAT Video Processor](https://github.com/SOAT-264/fiap-soat-video-local-dev).
+
 Microserviço responsável por upload e gerenciamento de vídeos. Ele valida autenticação com o serviço de auth, persiste metadados e publica eventos de domínio para iniciar o pipeline assíncrono de processamento.
 
 ## Sumário
