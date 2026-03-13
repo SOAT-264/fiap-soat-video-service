@@ -78,6 +78,23 @@ jobs:
           kubectl version --client
           kubectl cluster-info
 
+      - name: Cleanup conflicting observability containers
+        run: |
+          $containers = @(
+            "vp-prometheus",
+            "vp-grafana",
+            "vp-loki",
+            "vp-blackbox-exporter"
+          )
+
+          foreach ($container in $containers) {
+            $existing = docker ps -a --filter "name=^/$container$" --format "{{.ID}}"
+
+            if (-not [string]::IsNullOrWhiteSpace($existing)) {
+              docker rm -f $container *> $null
+            }
+          }
+
       - name: Start local base infrastructure
         working-directory: ${{ github.workspace }}/fiap-soat-video-local-dev
         run: docker compose up -d --remove-orphans
